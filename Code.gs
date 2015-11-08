@@ -1,8 +1,8 @@
 //  Article
 //
-//    http://bitvectors.blogspot.com . . . . .
+//    http://bitvectors.blogspot.com/2015/11/page1.html
 //
-//  describes this application . . .
+//  uses this file . . .
 
 //  The doGet() and runQuery() functions and the
 //  onOpen() trigger all see the spreadsheet,

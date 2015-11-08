@@ -1,3 +1,9 @@
+//  Article
+//
+//    http://bitvectors.blogspot.com/2015/11/page1.html
+//
+//  uses this file . . .
+
 function getSPStringObject(SPName) {
 
   //  Set up the stored procedure call for the

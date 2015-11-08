@@ -1,3 +1,9 @@
+//  Article
+//
+//    http://bitvectors.blogspot.com/2015/11/page1.html
+//
+//  uses this file . . .
+
 function queryBQProject(queryString) {
 
   //  Use script properties defined at
