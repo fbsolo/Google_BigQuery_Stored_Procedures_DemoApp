@@ -1,0 +1,172 @@
+CREATE DEFINER=`root`@`%` PROCEDURE `usp_return_BigQuery_SP`(IN COMMA_DELIMITED_PARAM VARCHAR(1000))
+BEGIN
+	
+    #	String input parameter
+    #
+	#		COMMA_DELIMITED_PARAM
+	#
+    #	will parse out to seven (7)
+    #	values. The last value holds
+    #	an integer function ID. Value
+    #	six may be empty or it can have
+    #	a " " space. It will only have
+    #	an integer if the last parsed
+    #	value is four (4) because a
+    #	four (4) value here maps to
+    #	the QUANTILES function.
+    #
+    #	The value mappings from the
+    #	parsed COMMA_DELIMITED_PARAM
+    #	string:
+    #
+    #		FIRST_ZIP_DIGIT
+    #		EMP
+    #		QP1
+    #		AP
+    #		EST
+    #		QUANTILES_VALUE
+    #		DDL_QUERY_VALUE
+    #
+    #	This SP won't deal with the QUERY_NAME
+    #	(between EST and QUANTILES_VALUE) so
+    #	leave it out of the parameter . . .
+    
+	DECLARE FIRST_ZIP_DIGIT VARCHAR(10);
+	DECLARE EMP VARCHAR(15);
+	DECLARE QP1 VARCHAR(25);
+	DECLARE AP VARCHAR(35);
+	DECLARE EST VARCHAR(35);
+	DECLARE QUANTILES_VALUE VARCHAR(15);
+	DECLARE DDL_QUERY_VALUE VARCHAR(100);
+    
+	DECLARE SP_STRING VARCHAR(1000);
+
+	#	Use the SUBSTR function to extract the values from
+    #	comma-delimited string parameter
+    #
+	#		COMMA_DELIMITED_PARAM
+    #
+	#	into separate variables. Note that the sixth element (IOW
+    #	the equivalent of arrayParam(5) ) has the query function
+    #	name text - specifically, DDL QUERY NAME. We'll ignore that
+    #	value in this SP.
+	#
+	#	In the SUBSTR functions, the integer 1 "moves" the SUBSTR
+	#	function "boundary" past the left-most detected comma . . .
+
+	SET FIRST_ZIP_DIGIT = SUBSTRING_INDEX(COMMA_DELIMITED_PARAM, ",", 1);
+    SET COMMA_DELIMITED_PARAM = SUBSTR(COMMA_DELIMITED_PARAM, INSTR(COMMA_DELIMITED_PARAM, ",") + 1);
+
+	SET EMP = SUBSTRING_INDEX(COMMA_DELIMITED_PARAM, ",", 1);
+    SET COMMA_DELIMITED_PARAM = SUBSTR(COMMA_DELIMITED_PARAM, INSTR(COMMA_DELIMITED_PARAM, ",") + 1);
+
+	SET QP1 = SUBSTRING_INDEX(COMMA_DELIMITED_PARAM, ",", 1);
+    SET COMMA_DELIMITED_PARAM = SUBSTR(COMMA_DELIMITED_PARAM, INSTR(COMMA_DELIMITED_PARAM, ",") + 1);
+
+	SET AP = SUBSTRING_INDEX(COMMA_DELIMITED_PARAM, ",", 1);
+    SET COMMA_DELIMITED_PARAM = SUBSTR(COMMA_DELIMITED_PARAM, INSTR(COMMA_DELIMITED_PARAM, ",") + 1);
+
+	SET EST = SUBSTRING_INDEX(COMMA_DELIMITED_PARAM, ",", 1);
+    SET COMMA_DELIMITED_PARAM = SUBSTR(COMMA_DELIMITED_PARAM, INSTR(COMMA_DELIMITED_PARAM, ",") + 1);
+
+	SET QUANTILES_VALUE = SUBSTRING_INDEX(COMMA_DELIMITED_PARAM, ",", 1);
+    SET COMMA_DELIMITED_PARAM = SUBSTR(COMMA_DELIMITED_PARAM, INSTR(COMMA_DELIMITED_PARAM, ",") + 1);
+
+	SET DDL_QUERY_VALUE = SUBSTRING_INDEX(COMMA_DELIMITED_PARAM, ",", 1);
+    SET COMMA_DELIMITED_PARAM = SUBSTR(COMMA_DELIMITED_PARAM, INSTR(COMMA_DELIMITED_PARAM, ",") + 1);
+
+	SET SP_STRING = "SELECT ";
+
+	#	Build out the SELECT statement into variable
+    #
+    #		SP_STRING
+    #
+    #	proceeding variable by variable. Ignore all
+    #	variables which have value of "ANY" . . .
+
+	CASE
+		WHEN DDL_QUERY_VALUE = "1" THEN
+			SET SP_STRING = CONCAT(SP_STRING, "STDDEV(QP1) AS STDDEV_QUARTERLY_PAYROLL_x281_x3d_x24_1Kx29 ");
+		WHEN DDL_QUERY_VALUE = "2" THEN
+			SET SP_STRING = CONCAT(SP_STRING, "AVG(AP) AS AVG_TOTAL_ANNUAL_PAYROLL_x281_x3d_x24_1Kx29 ");
+		WHEN DDL_QUERY_VALUE = "3" THEN
+			SET SP_STRING = CONCAT(SP_STRING, "VARIANCE(EST) AS VARIANCE_TOTAL_ESTABLISHMENT_COUNT_x281_x3d_COUNTx5e2x29 ");
+		WHEN DDL_QUERY_VALUE = "4" THEN
+
+        #	Special case for the QUANTILES function . . .
+
+			SET SP_STRING = CONCAT(SP_STRING, "ROW_NUMBER() OVER (ORDER BY QUANTILE_VALUES) AS QUANTILE_NUMBER, ");
+			SET SP_STRING = CONCAT(SP_STRING, "QUANTILES(EMP, ", QUANTILES_VALUE, ") AS QUANTILE_VALUES ");
+ 	END CASE;
+    
+    #	BigQuery expects to see
+	#
+	#		{dataset name}.{table name}
+	#
+	#	in the FROM clause . . .
+
+	SET SP_STRING = CONCAT(SP_STRING, "FROM BigQuerySPDemoAppDS.zbp11totals WHERE ");
+
+	#	Only include a substring / variable value extracted from the
+    #	COMMA_DELIMITED_PARAM parameter if it is not equal to "ANY".
+    #	User-defined function
+    #
+    #		endOfQueryString
+    #
+	#	places " AND " at the end of SP_STRING. In any CASE statement
+    #	below, if the last six characters of SP_STRING are "WHERE ",
+    #	the variable handled by the CASE statement will become the
+    #	first WHERE clause filter. Otherwise, that variable will need
+    #	an " AND " in front of it in the WHERE clause. User-defined
+	#	function
+    #
+    #		endOfQueryString
+    #
+    #	called in all of the CONCAT functions in the CASE statements
+    #	below (except for FIRST_ZIP_DIGIT) handles all this.
+    #
+    #	Zip code value works a little differently in the WHERE
+	#	clause. To get the actual zip code value picked, build
+	#	a jQuery statement that returns the value picked in the
+	#	dropdown itself. DDLArray[0] maps to the zip code
+	#	dropdown - IOW, ZIP is the first dropdown . . .
+
+	CASE
+		WHEN FIRST_ZIP_DIGIT != "ANY" THEN
+			SET SP_STRING = CONCAT(SP_STRING, "ZIP LIKE '", FIRST_ZIP_DIGIT, "%'");
+		ELSE BEGIN END;
+	END CASE;
+
+	CASE
+		WHEN EMP != "ANY" THEN
+			SET SP_STRING = CONCAT(SP_STRING, endOfQueryString(SP_STRING), " EMP BETWEEN ", EMP);
+		ELSE BEGIN END;
+	END CASE;
+
+	CASE
+		WHEN QP1 != "ANY" THEN
+			SET SP_STRING = CONCAT(SP_STRING, endOfQueryString(SP_STRING), " QP1 BETWEEN ", QP1);
+		ELSE BEGIN END;
+	END CASE;
+
+	CASE
+		WHEN AP != "ANY" THEN
+			SET SP_STRING = CONCAT(SP_STRING, endOfQueryString(SP_STRING), " AP BETWEEN ", AP);
+		ELSE BEGIN END;
+	END CASE;
+
+	CASE
+		WHEN EST != "ANY" THEN
+			SET SP_STRING = CONCAT(SP_STRING, endOfQueryString(SP_STRING), " EST BETWEEN ", EST);
+		ELSE BEGIN END;
+	END CASE;
+
+	CASE
+		WHEN RIGHT(SP_STRING, 6) = "WHERE " THEN
+			SET SP_STRING = SUBSTRING(SP_STRING, 1, (LENGTH(SP_STRING) - 7));
+		ELSE BEGIN END;
+	END CASE;
+
+	SELECT CONCAT(SP_STRING, ';');
+ 
+END

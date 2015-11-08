@@ -1,0 +1,13 @@
+CREATE DEFINER=`root`@`%` FUNCTION `endOfQueryString`(queryString VARCHAR(1000)) RETURNS varchar(4) CHARSET utf8
+BEGIN
+
+	DECLARE returnString VARCHAR(4);
+
+	SET returnString = " ";
+
+	IF (RIGHT(queryString, 6) != "WHERE ") then
+		SET returnString = " AND ";
+	END IF;
+
+	return returnString;
+END
