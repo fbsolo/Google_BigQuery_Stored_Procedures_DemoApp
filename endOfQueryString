@@ -1,3 +1,9 @@
+USE DEMO;
+
+DELIMITER $$
+
+DROP FUNCTION IF EXISTS endOfQueryString$$
+
 CREATE DEFINER=`root`@`%` FUNCTION `endOfQueryString`(queryString VARCHAR(1000)) RETURNS varchar(4) CHARSET utf8
 BEGIN
 
